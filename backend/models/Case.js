@@ -94,9 +94,9 @@ caseSchema.pre('save', function(next) {
   next();
 });
 
-// Auto-generate case number
-caseSchema.pre('save', async function(next) {
-  if (this.isNew) {
+// Auto-generate case number before validation so "required" passes
+caseSchema.pre('validate', async function(next) {
+  if (this.isNew && !this.caseNumber) {
     const count = await mongoose.model('Case').countDocuments();
     this.caseNumber = `CASE-${Date.now()}-${(count + 1).toString().padStart(4, '0')}`;
   }

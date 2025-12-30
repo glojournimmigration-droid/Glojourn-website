@@ -6,10 +6,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import {
   Globe, LogOut, Loader2, User, FileText, CheckCircle2, Clock, Upload, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
+
+const createInitialFormState = () => ({
+  visaType: "tourist",
+  destinationCountry: "",
+  purposeOfVisit: "",
+  intendedDateOfEntry: "",
+  intendedLengthOfStay: "",
+  priority: "medium"
+});
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
@@ -17,10 +45,19 @@ const ClientDashboard = () => {
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [startDialogOpen, setStartDialogOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startForm, setStartForm] = useState(() => createInitialFormState());
 
   useEffect(() => {
     fetchApplication();
   }, []);
+
+  useEffect(() => {
+    if (!startDialogOpen) {
+      setStartForm(createInitialFormState());
+    }
+  }, [startDialogOpen]);
 
   const fetchApplication = async () => {
     try {
@@ -71,6 +108,46 @@ const ClientDashboard = () => {
       toast.error("Failed to upload document");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : "N/A");
+
+  const handleStartApplication = async () => {
+    setStarting(true);
+
+    const applicationDetails = {};
+    if (startForm.destinationCountry.trim()) {
+      applicationDetails.destinationCountry = startForm.destinationCountry.trim();
+    }
+    if (startForm.purposeOfVisit.trim()) {
+      applicationDetails.purposeOfVisit = startForm.purposeOfVisit.trim();
+    }
+    if (startForm.intendedDateOfEntry) {
+      applicationDetails.intendedDateOfEntry = startForm.intendedDateOfEntry;
+    }
+    if (startForm.intendedLengthOfStay) {
+      applicationDetails.intendedLengthOfStay = Number(startForm.intendedLengthOfStay);
+    }
+
+    const payload = {
+      visaType: startForm.visaType,
+      priority: startForm.priority,
+      ...(Object.keys(applicationDetails).length ? { applicationDetails } : {})
+    };
+
+    try {
+      const res = await apiClient.post("/applications", payload);
+      setApplication(res.data.application);
+      toast.success("Application started successfully");
+      setStartDialogOpen(false);
+    } catch (error) {
+      const message = error.response?.data?.message
+        || error.response?.data?.errors?.[0]?.msg
+        || "Failed to start application";
+      toast.error(message);
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -131,7 +208,7 @@ const ClientDashboard = () => {
                     <CardDescription>Destination: {application.personal_details?.destination_country}</CardDescription>
                   </div>
                   <Badge className={`${getStatusColor(application.status)} text-sm px-3 py-1`}>
-                    {application.status.replace("_", " ").toUpperCase()}
+                    {(application?.status || "unknown").replace("_", " ").toUpperCase()}
                   </Badge>
                 </div>
               </CardHeader>
@@ -139,11 +216,11 @@ const ClientDashboard = () => {
                 <div className="grid sm:grid-cols-3 gap-4 text-sm mt-2">
                   <div className="flex items-center gap-2 text-slate-600">
                     <Clock className="w-4 h-4" />
-                    Submitted: {new Date(application.created_at).toLocaleDateString()}
+                    Submitted: {formatDate(application.created_at)}
                   </div>
                   <div className="flex items-center gap-2 text-slate-600">
                     <CheckCircle2 className="w-4 h-4" />
-                    Last Update: {new Date(application.updated_at).toLocaleDateString()}
+                    Last Update: {formatDate(application.updated_at)}
                   </div>
                   {application.assigned_manager && (
                     <div className="flex items-center gap-2 text-slate-600">
@@ -233,7 +310,114 @@ const ClientDashboard = () => {
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">No Application Found</h2>
             <p className="text-slate-600 max-w-md mx-auto mb-6">You haven't started a visa application process yet. Start your journey today.</p>
-            <Button className="bg-teal-600 hover:bg-teal-700">Start New Application</Button>
+            <Dialog open={startDialogOpen} onOpenChange={setStartDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-teal-600 hover:bg-teal-700" disabled={starting}>
+                  {starting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Start New Application
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Start a new application</DialogTitle>
+                  <DialogDescription>
+                    Provide a few details to kick off your visa application. You can add more information later.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="visaType">Visa type</Label>
+                      <Select
+                        value={startForm.visaType}
+                        onValueChange={(value) => setStartForm((prev) => ({ ...prev, visaType: value }))}
+                      >
+                        <SelectTrigger id="visaType" className="bg-white">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tourist">Tourist</SelectItem>
+                          <SelectItem value="business">Business</SelectItem>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="work">Work</SelectItem>
+                          <SelectItem value="family">Family</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="priority">Priority</Label>
+                      <Select
+                        value={startForm.priority}
+                        onValueChange={(value) => setStartForm((prev) => ({ ...prev, priority: value }))}
+                      >
+                        <SelectTrigger id="priority" className="bg-white">
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="destinationCountry">Destination country</Label>
+                      <Input
+                        id="destinationCountry"
+                        placeholder="e.g., Canada"
+                        value={startForm.destinationCountry}
+                        onChange={(e) => setStartForm((prev) => ({ ...prev, destinationCountry: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="intendedDateOfEntry">Intended date of entry</Label>
+                      <Input
+                        id="intendedDateOfEntry"
+                        type="date"
+                        value={startForm.intendedDateOfEntry}
+                        onChange={(e) => setStartForm((prev) => ({ ...prev, intendedDateOfEntry: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="intendedLengthOfStay">Length of stay (days)</Label>
+                      <Input
+                        id="intendedLengthOfStay"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={startForm.intendedLengthOfStay}
+                        onChange={(e) => setStartForm((prev) => ({ ...prev, intendedLengthOfStay: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="purposeOfVisit">Purpose of visit</Label>
+                      <Textarea
+                        id="purposeOfVisit"
+                        rows={3}
+                        placeholder="Tell us briefly why you are visiting"
+                        value={startForm.purposeOfVisit}
+                        onChange={(e) => setStartForm((prev) => ({ ...prev, purposeOfVisit: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
+                  <Button variant="ghost" onClick={() => setStartDialogOpen(false)} disabled={starting}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleStartApplication} disabled={starting} className="bg-teal-600 hover:bg-teal-700">
+                    {starting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Start Application
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </main>
