@@ -15,7 +15,19 @@ const documentSchema = new mongoose.Schema({
     },
     document_type: {
         type: String,
-        enum: ['passport', 'visa', 'id_proof', 'financial', 'educational', 'other', 'client_upload'],
+        enum: [
+            'passport',
+            'visas',
+            'work_permits',
+            'certificates',
+            'prior_applications',
+            'tax_financials',
+            'id_proof',
+            'financial',
+            'educational',
+            'other',
+            'client_upload'
+        ],
         default: 'other'
     },
     uploaded_by: {

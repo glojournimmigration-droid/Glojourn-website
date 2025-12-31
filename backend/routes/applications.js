@@ -18,6 +18,52 @@ const applicationValidation = [
   body('visaType')
     .isIn(['tourist', 'business', 'student', 'work', 'family', 'other'])
     .withMessage('Invalid visa type'),
+  body('intakeForm.generalInformation.fullLegalName')
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Full legal name is required'),
+  body('intakeForm.generalInformation.dateOfBirth')
+    .isISO8601()
+    .withMessage('Date of birth is required and must be a valid date'),
+  body('intakeForm.generalInformation.birthCityCountry')
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('City and country of birth are required'),
+  body('intakeForm.generalInformation.citizenshipCountries')
+    .isArray({ min: 1 })
+    .withMessage('At least one citizenship country is required'),
+  body('intakeForm.generalInformation.email')
+    .isEmail()
+    .withMessage('Valid email is required'),
+  body('intakeForm.generalInformation.address.city')
+    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('City is required'),
+  body('intakeForm.generalInformation.address.state')
+    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('State is required'),
+  body('intakeForm.generalInformation.address.zip')
+    .isString()
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage('ZIP is required'),
+  body('intakeForm.generalInformation.address.country')
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Country is required'),
+  body('intakeForm.consultation.purposes')
+    .isArray({ min: 1 })
+    .withMessage('Select at least one purpose'),
+  body('intakeForm.acknowledgment.agreed')
+    .isBoolean()
+    .custom((val) => val === true)
+    .withMessage('Acknowledgment is required'),
   body('applicationDetails.destinationCountry')
     .optional()
     .trim()
@@ -48,6 +94,38 @@ const updateApplicationValidation = [
     .optional()
     .isIn(['tourist', 'business', 'student', 'work', 'family', 'other'])
     .withMessage('Invalid visa type'),
+  body('intakeForm.generalInformation.fullLegalName')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Full legal name is required'),
+  body('intakeForm.generalInformation.dateOfBirth')
+    .optional()
+    .isISO8601()
+    .withMessage('Date of birth must be a valid date'),
+  body('intakeForm.generalInformation.birthCityCountry')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('City and country of birth are required'),
+  body('intakeForm.generalInformation.citizenshipCountries')
+    .optional()
+    .isArray({ min: 1 })
+    .withMessage('At least one citizenship country is required'),
+  body('intakeForm.generalInformation.email')
+    .optional()
+    .isEmail()
+    .withMessage('Valid email is required'),
+  body('intakeForm.consultation.purposes')
+    .optional()
+    .isArray({ min: 1 })
+    .withMessage('Select at least one purpose'),
+  body('intakeForm.acknowledgment.agreed')
+    .optional()
+    .isBoolean()
+    .withMessage('Acknowledgment is required'),
   body('applicationDetails.destinationCountry')
     .optional()
     .trim()

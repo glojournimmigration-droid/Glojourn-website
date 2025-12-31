@@ -3,6 +3,20 @@ const Case = require('../models/Case');
 const User = require('../models/User');
 const Automation = require('../models/Automation');
 
+const REQUIRED_DOC_TYPES = [
+  'passport',
+  'visas',
+  'work_permits',
+  'certificates',
+  'prior_applications',
+  'tax_financials'
+];
+
+const getMissingRequiredDocs = (caseData) => {
+  const uploadedTypes = new Set((caseData.documents || []).map((doc) => doc.document_type));
+  return REQUIRED_DOC_TYPES.filter((type) => !uploadedTypes.has(type));
+};
+
 // @desc    Get all cases with role-based filtering
 // @route   GET /api/cases
 // @access  Private
@@ -117,7 +131,7 @@ const createCase = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { visaType, applicationDetails, priority = 'medium' } = req.body;
+    const { visaType, applicationDetails, intakeForm, priority = 'medium' } = req.body;
     const clientId = req.user.role === 'client' ? req.user._id : req.body.clientId;
 
     // Validate client exists
@@ -131,10 +145,21 @@ const createCase = async (req, res) => {
       return res.status(403).json({ message: 'Cannot create case for another user' });
     }
 
+    const fallbackIntake = {
+      generalInformation: {
+        fullLegalName: client.name || 'Client',
+        email: client.email,
+        citizenshipCountries: [],
+        address: { city: '', state: '', zip: '', country: '' }
+      },
+      acknowledgment: { agreed: false }
+    };
+
     const caseData = new Case({
       client: clientId,
       visaType,
       applicationDetails,
+      intakeForm: intakeForm || fallbackIntake,
       priority,
       status: 'draft'
     });
@@ -180,12 +205,26 @@ const updateCase = async (req, res) => {
     const updates = req.body;
     const oldStatus = caseData.status;
 
-    // Update case
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
+    const clientFields = ['applicationDetails', 'intakeForm', 'priority'];
+    const staffFields = [...clientFields, 'status', 'assignedCoordinator', 'assignedManager', 'visaType'];
+    const allowedFields = ['admin', 'manager', 'coordinator'].includes(req.user.role) ? staffFields : clientFields;
+
+    Object.keys(updates).forEach((key) => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
         caseData[key] = updates[key];
       }
     });
+
+    if (updates.status && ['submitted', 'under_review', 'processing', 'approved', 'completed'].includes(updates.status)) {
+      await caseData.populate('documents');
+      const missingDocs = getMissingRequiredDocs(caseData);
+      if (missingDocs.length) {
+        return res.status(400).json({
+          message: 'Upload all required documents before advancing the case status.',
+          missingDocuments: missingDocs
+        });
+      }
+    }
 
     // Set updated by for timeline
     caseData._updatedBy = req.user._id;

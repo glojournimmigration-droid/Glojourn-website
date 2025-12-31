@@ -2,15 +2,33 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const env = require('../config/env');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = env.JWT_SECRET;
+const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
 
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ userId: id }, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN
   });
+};
+
+// Extract the requester (if any) from the Authorization header without requiring the auth middleware.
+const getRequester = async (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return null;
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const requester = await User.findById(decoded.userId).select('role');
+    return requester;
+  } catch (err) {
+    return null;
+  }
 };
 
 // @desc    Register a new user
@@ -33,15 +51,23 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // specific role restrictions could go here if needed, 
-    // but basic validation is handled in routes/auth.js
+    // Only admins can create elevated roles. All public signups are forced to client.
+    let targetRole = role || 'client';
+    if (targetRole !== 'client') {
+      const requester = await getRequester(req);
+      if (!requester || requester.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create staff accounts' });
+      }
+    } else {
+      targetRole = 'client';
+    }
 
     // Create new user
     user = new User({
       name,
       email,
       password,
-      role: role || 'client' // Default to client if not specified
+      role: targetRole
     });
 
     await user.save();

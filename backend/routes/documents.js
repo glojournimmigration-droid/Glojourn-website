@@ -5,6 +5,7 @@ const path = require('path');
 const { body, param } = require('express-validator');
 const { uploadDocument } = require('../controllers/documentController');
 const { authenticateToken } = require('../middleware/auth');
+const env = require('../config/env');
 
 const router = express.Router();
 
@@ -24,10 +25,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: Number(process.env.MAX_FILE_SIZE) || 5242880 // 5MB default
+    fileSize: env.MAX_FILE_SIZE_BYTES
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/png,image/gif,application/pdf').split(',');
+    const allowedTypes = env.ALLOWED_FILE_TYPES;
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -40,9 +41,23 @@ const upload = multer({
 router.use(authenticateToken);
 
 // Upload document
+const allowedDocTypes = [
+  'passport',
+  'visas',
+  'work_permits',
+  'certificates',
+  'prior_applications',
+  'tax_financials',
+  'id_proof',
+  'financial',
+  'educational',
+  'other',
+  'client_upload'
+];
+
 router.post('/upload', upload.single('file'), [
   body('application_id').isMongoId().withMessage('Invalid application ID'),
-  body('document_type').optional().isString().withMessage('Invalid document type')
+  body('document_type').optional().isIn(allowedDocTypes).withMessage('Invalid document type')
 ], uploadDocument);
 
 module.exports = router;

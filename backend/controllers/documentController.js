@@ -24,10 +24,44 @@ exports.uploadDocument = async (req, res) => {
             return res.status(404).json({ message: 'Application not found' });
         }
 
+        const allowedTypes = new Set([
+            'passport',
+            'visas',
+            'work_permits',
+            'certificates',
+            'prior_applications',
+            'tax_financials',
+            'id_proof',
+            'financial',
+            'educational',
+            'other',
+            'client_upload'
+        ]);
+
+        if (document_type && !allowedTypes.has(document_type)) {
+            return res.status(400).json({ message: 'Unsupported document type' });
+        }
+
         // Check permissions (owner or staff)
         if (application.client.toString() !== req.user._id.toString() &&
             !['admin', 'manager', 'coordinator'].includes(req.user.role)) {
             return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // If client uploading, ensure they indicated they can provide this doc type
+        if (req.user.role === 'client' && document_type && application.intakeForm?.documentsProvided) {
+            const canProvide = {
+                passport: application.intakeForm.documentsProvided.passport,
+                visas: application.intakeForm.documentsProvided.visas,
+                work_permits: application.intakeForm.documentsProvided.workPermits,
+                certificates: application.intakeForm.documentsProvided.certificates,
+                prior_applications: application.intakeForm.documentsProvided.priorApplications,
+                tax_financials: application.intakeForm.documentsProvided.taxFinancials
+            };
+
+            if (document_type in canProvide && !canProvide[document_type]) {
+                return res.status(400).json({ message: 'You indicated you cannot provide this document type' });
+            }
         }
 
         // Create document record

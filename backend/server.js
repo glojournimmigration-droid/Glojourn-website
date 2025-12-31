@@ -1,14 +1,10 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const dotenv = require('dotenv');
+const env = require('./config/env');
 const connectDB = require('./config/database');
-
-// Load environment variables
-dotenv.config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -26,19 +22,22 @@ const app = express();
 // Connect to Database
 connectDB();
 
+// If behind a proxy (e.g., load balancer), ensure IPs are read correctly for rate limiting
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: env.FRONTEND_URL,
   credentials: true
 }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: (Number(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+  windowMs: env.RATE_LIMIT_WINDOW * 60 * 1000,
+  max: env.RATE_LIMIT_MAX_REQUESTS
 });
 app.use('/api', limiter);
 
@@ -67,7 +66,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

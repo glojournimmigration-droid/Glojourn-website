@@ -2,6 +2,20 @@ const { validationResult } = require('express-validator');
 const Case = require('../models/Case');
 const User = require('../models/User');
 
+const REQUIRED_DOC_TYPES = [
+  'passport',
+  'visas',
+  'work_permits',
+  'certificates',
+  'prior_applications',
+  'tax_financials'
+];
+
+const getMissingRequiredDocs = (application) => {
+  const uploadedTypes = new Set((application.documents || []).map((doc) => doc.document_type));
+  return REQUIRED_DOC_TYPES.filter((type) => !uploadedTypes.has(type));
+};
+
 // Shape a Case document into the frontend contract
 const formatApplication = (caseDoc) => {
   const documents = Array.isArray(caseDoc.documents)
@@ -33,6 +47,7 @@ const formatApplication = (caseDoc) => {
       accommodation_details: caseDoc.applicationDetails?.accommodationDetails,
       financial_info: caseDoc.applicationDetails?.financialInfo,
     },
+    intake_form: caseDoc.intakeForm || null,
     documents,
     created_at: caseDoc.createdAt,
     updated_at: caseDoc.updatedAt,
@@ -133,7 +148,7 @@ const createApplication = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { visaType, applicationDetails, priority = 'medium' } = req.body;
+    const { visaType, applicationDetails, intakeForm, priority = 'medium' } = req.body;
 
     // Check if user already has an application
     const existingApplication = await Case.findOne({ client: req.user._id });
@@ -145,8 +160,9 @@ const createApplication = async (req, res) => {
       client: req.user._id,
       visaType,
       applicationDetails,
+      intakeForm,
       priority,
-      status: 'submitted'
+      status: 'draft'
     });
 
     await application.save();
@@ -183,12 +199,38 @@ const updateApplication = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const allowedFields = ['visaType', 'applicationDetails', 'priority', 'status', 'assignedCoordinator', 'assignedManager'];
+    const updates = req.body;
+
+    const clientFields = ['visaType', 'applicationDetails', 'intakeForm', 'priority'];
+    const staffFields = [...clientFields, 'status', 'assignedCoordinator', 'assignedManager'];
+    const isStaff = ['admin', 'coordinator', 'manager'].includes(req.user.role);
+    const requestedStatus = updates.status;
+
+    const allowedFields = isStaff ? staffFields : [...clientFields];
+    if (!isStaff && requestedStatus === 'submitted') {
+      allowedFields.push('status');
+    }
+
     Object.entries(req.body).forEach(([key, value]) => {
       if (allowedFields.includes(key) && value !== undefined) {
         application[key] = value;
       }
     });
+
+    if (!isStaff && requestedStatus && requestedStatus !== 'submitted') {
+      return res.status(403).json({ message: 'Only staff can change the application status further.' });
+    }
+
+    if (requestedStatus && ['submitted', 'under_review', 'processing', 'approved', 'completed'].includes(requestedStatus)) {
+      await application.populate('documents');
+      const missingDocs = getMissingRequiredDocs(application);
+      if (missingDocs.length) {
+        return res.status(400).json({
+          message: 'Upload all required documents before submitting.',
+          missingDocuments: missingDocs
+        });
+      }
+    }
 
     // Track who performed the update for timeline entries
     application._updatedBy = req.user._id;

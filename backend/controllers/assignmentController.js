@@ -18,8 +18,8 @@ const assignApplication = async (req, res) => {
       return res.status(404).json({ message: 'Application not found' });
     }
 
-    // Check permissions - only managers and admins can assign managers
-    if (!['admin', 'manager'].includes(req.user.role)) {
+    // Allow coordinators, managers, and admins to assign managers
+    if (!['admin', 'manager', 'coordinator'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
