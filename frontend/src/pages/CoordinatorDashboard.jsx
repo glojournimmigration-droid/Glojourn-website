@@ -319,7 +319,7 @@ const CoordinatorDashboard = () => {
                       </TableCell>
                       <TableCell>
                         {app.assigned_manager ?
-                          managers.find(m => m.id === app.assigned_manager)?.name || "Assigned" :
+                          (app.assigned_manager.name || managers.find(m => m.id === app.assigned_manager)?.name || "Assigned") :
                           <span className="text-slate-400">Not assigned</span>
                         }
                       </TableCell>

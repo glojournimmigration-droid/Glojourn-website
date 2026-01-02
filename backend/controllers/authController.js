@@ -31,7 +31,7 @@ const getRequester = async (req) => {
   }
 };
 
-// @desc    Register a new user
+// @desc    Register a new user (Client only)
 // @route   POST /api/auth/signup
 // @access  Public
 exports.signup = async (req, res) => {
@@ -41,7 +41,7 @@ exports.signup = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
   try {
     // Check if user already exists
@@ -51,23 +51,15 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Only admins can create elevated roles. All public signups are forced to client.
-    let targetRole = role || 'client';
-    if (targetRole !== 'client') {
-      const requester = await getRequester(req);
-      if (!requester || requester.role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can create staff accounts' });
-      }
-    } else {
-      targetRole = 'client';
-    }
+    // Public signup is strictly for clients
+    const role = 'client';
 
     // Create new user
     user = new User({
       name,
       email,
       password,
-      role: targetRole
+      role
     });
 
     await user.save();
@@ -88,6 +80,56 @@ exports.signup = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during signup' });
+  }
+};
+
+// @desc    Create a new user (Admin only)
+// @route   POST /api/auth/create-user
+// @access  Private (Admin only)
+exports.createUser = async (req, res) => {
+  // Check validation results
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { name, email, password, role } = req.body;
+
+  // Validate role
+  if (!['admin', 'manager', 'coordinator'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid role for staff creation' });
+  }
+
+  try {
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Create new user
+    user = new User({
+      name,
+      email,
+      password,
+      role
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error during user creation' });
   }
 };
 

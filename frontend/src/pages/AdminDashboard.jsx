@@ -37,7 +37,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     setCreateLoading(true);
     try {
-      await apiClient.post("/auth/signup", newUser);
+      await apiClient.post("/auth/create-user", newUser);
       toast.success("Team member created successfully");
       setIsCreateUserOpen(false);
       setNewUser({ name: "", email: "", password: "", role: "coordinator" });
@@ -279,6 +279,7 @@ const AdminDashboard = () => {
                         <TableHead>Email</TableHead>
                         <TableHead>Visa Type</TableHead>
                         <TableHead>Destination</TableHead>
+                        <TableHead>Assigned To</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Documents</TableHead>
                         <TableHead>Submitted</TableHead>
@@ -291,6 +292,16 @@ const AdminDashboard = () => {
                           <TableCell>{app.client_email}</TableCell>
                           <TableCell>{app.personal_details?.visa_type || "-"}</TableCell>
                           <TableCell>{app.personal_details?.destination_country || "-"}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col text-xs">
+                              {app.assigned_manager ? (
+                                <span className="font-medium text-slate-900">Mgr: {app.assigned_manager.name}</span>
+                              ) : <span className="text-slate-400">No Manager</span>}
+                              {app.assigned_coordinator ? (
+                                <span className="text-slate-500">Crd: {app.assigned_coordinator.name}</span>
+                              ) : <span className="text-slate-400">No Coordinator</span>}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge className={`${getStatusColor(app.status)} border`}>
                               {app.status.replace("_", " ").toUpperCase()}

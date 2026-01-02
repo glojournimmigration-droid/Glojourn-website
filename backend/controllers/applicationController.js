@@ -20,12 +20,12 @@ const getMissingRequiredDocs = (application) => {
 const formatApplication = (caseDoc) => {
   const documents = Array.isArray(caseDoc.documents)
     ? caseDoc.documents.map((doc) => ({
-        id: doc._id?.toString?.() || String(doc),
-        file_name: doc.file_name,
-        document_type: doc.document_type,
-        status: doc.status,
-        uploaded_at: doc.createdAt,
-      }))
+      id: doc._id?.toString?.() || String(doc),
+      file_name: doc.file_name,
+      document_type: doc.document_type,
+      status: doc.status,
+      uploaded_at: doc.createdAt,
+    }))
     : [];
 
   const intake = caseDoc.intakeForm || {};
@@ -41,8 +41,16 @@ const formatApplication = (caseDoc) => {
     client_id: caseDoc.client?._id?.toString() || null,
     client_name: caseDoc.client?.name,
     client_email: caseDoc.client?.email,
-    assigned_coordinator: caseDoc.assignedCoordinator?._id?.toString() || null,
-    assigned_manager: caseDoc.assignedManager?._id?.toString() || null,
+    assigned_coordinator: caseDoc.assignedCoordinator ? {
+      id: caseDoc.assignedCoordinator._id?.toString(),
+      name: caseDoc.assignedCoordinator.name,
+      email: caseDoc.assignedCoordinator.email
+    } : null,
+    assigned_manager: caseDoc.assignedManager ? {
+      id: caseDoc.assignedManager._id?.toString(),
+      name: caseDoc.assignedManager.name,
+      email: caseDoc.assignedManager.email
+    } : null,
     status: caseDoc.status,
     priority: caseDoc.priority,
     personal_details: {
@@ -229,7 +237,7 @@ const updateApplication = async (req, res) => {
 
     // Check permissions
     if (application.client.toString() !== req.user._id.toString() &&
-        !['admin', 'coordinator', 'manager'].includes(req.user.role)) {
+      !['admin', 'coordinator', 'manager'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
