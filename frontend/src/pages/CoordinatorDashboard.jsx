@@ -90,7 +90,7 @@ const CoordinatorDashboard = () => {
     );
   }
 
-  const newApplications = applications.filter(a => a.status === "submitted" && !a.assigned_manager);
+  const newApplications = applications.filter(a => a.status !== "draft" && !a.assigned_manager);
   const assignedApplications = applications.filter(a => a.assigned_manager);
 
   return (
@@ -319,7 +319,7 @@ const CoordinatorDashboard = () => {
                       </TableCell>
                       <TableCell>
                         {app.assigned_manager ?
-                          managers.find(m => m.id === app.assigned_manager)?.name || "Assigned" :
+                          (app.assigned_manager.name || managers.find(m => m.id === app.assigned_manager)?.name || "Assigned") :
                           <span className="text-slate-400">Not assigned</span>
                         }
                       </TableCell>

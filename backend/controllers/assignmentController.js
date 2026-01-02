@@ -11,6 +11,7 @@ const assignApplication = async (req, res) => {
     }
 
     const { application_id, manager_id } = req.body;
+    let manager = null;
 
     // Verify the application exists
     const application = await Case.findById(application_id);
@@ -25,18 +26,34 @@ const assignApplication = async (req, res) => {
 
     // Verify manager exists and has manager role
     if (manager_id) {
-      const manager = await User.findById(manager_id);
+      manager = await User.findById(manager_id);
       if (!manager || manager.role !== 'manager') {
         return res.status(404).json({ message: 'Manager not found' });
       }
     }
 
+    // Ensure coordinator ownership is captured
+    if (!application.assignedCoordinator && req.user.role === 'coordinator') {
+      application.assignedCoordinator = req.user._id;
+    }
+
     // Update assignment
     application.assignedManager = manager_id || null;
+
+    // Add to timeline for auditing
+    if (manager_id) {
+      application.timeline.push({
+        status: application.status,
+        updatedBy: req.user._id,
+        notes: `Assigned to manager: ${manager?.name || manager_id}`
+      });
+    }
+
     await application.save();
 
     // Populate the response
     await application.populate('assignedManager', 'name email');
+    await application.populate('assignedCoordinator', 'name email');
 
     res.json({
       message: 'Application assigned successfully',

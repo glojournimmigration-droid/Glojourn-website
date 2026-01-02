@@ -104,9 +104,21 @@ const ClientDashboard = () => {
     setFormData(initialIntakeForm(user));
   }, [user]);
 
+  const [documentRequests, setDocumentRequests] = useState([]);
+
   useEffect(() => {
     fetchApplication();
+    fetchDocumentRequests();
   }, []);
+
+  const fetchDocumentRequests = async () => {
+    try {
+      const res = await apiClient.get("/document-requests");
+      setDocumentRequests(res.data.requests || []);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+    }
+  };
 
   const fetchApplication = async () => {
     try {
@@ -619,466 +631,499 @@ const ClientDashboard = () => {
                     <CardDescription>Messages from your case manager</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/* Placeholder for messages - Assuming backend could provide this later */}
-                    <div className="flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-md">
-                      <AlertCircle className="w-5 h-5" />
-                      <p className="text-sm">No pending actions or new messages from your manager.</p>
+                  {/* Document Requests List */}
+                  {documentRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {documentRequests.map((req) => (
+                        <div key={req.id} className="p-4 bg-amber-50 border border-amber-200 rounded-md">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-amber-900 text-sm">
+                                Request: {req.document_type.replace(/_/g, ' ').toUpperCase()}
+                              </h4>
+                              <p className="text-sm text-amber-800 mt-1">{req.message}</p>
+                              <div className="flex items-center gap-2 mt-2 text-xs text-amber-700">
+                                <User className="w-3 h-3" />
+                                <span>{req.created_by?.name || 'Manager'}</span>
+                                <Clock className="w-3 h-3 ml-2" />
+                                <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-white border-amber-300 hover:bg-amber-100 text-amber-900"
+                              onClick={() => document.querySelector(`[value="documents"]`)?.click()}
+                            >
+                              Upload
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-md">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <p className="text-sm">No pending document requests at this time.</p>
+                    </div>
+                  )}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
           </div>
-        ) : (
-          <form onSubmit={handleSubmitIntake} className="space-y-6">
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>General Information</CardTitle>
-                <CardDescription>As printed on your passport</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Full legal name</Label>
-                    <Input value={formData.intakeForm.generalInformation.fullLegalName} onChange={(e) => updateGeneral("fullLegalName", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Other names / aliases</Label>
-                    <Input value={formData.intakeForm.generalInformation.otherNames} onChange={(e) => updateGeneral("otherNames", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date of birth</Label>
-                    <Input type="date" value={formData.intakeForm.generalInformation.dateOfBirth} onChange={(e) => updateGeneral("dateOfBirth", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>City and country of birth</Label>
-                    <Input value={formData.intakeForm.generalInformation.birthCityCountry} onChange={(e) => updateGeneral("birthCityCountry", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Citizenship / nationality (comma separated)</Label>
-                    <Input
-                      value={formData.intakeForm.generalInformation.citizenshipCountries.join(", ")}
-                      onChange={(e) => updateGeneral("citizenshipCountries", e.target.value.split(",").map((c) => c.trim()))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Gender</Label>
-                    <Select value={formData.intakeForm.generalInformation.gender} onValueChange={(value) => updateGeneral("gender", value)}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Marital status</Label>
-                    <Select value={formData.intakeForm.generalInformation.maritalStatus} onValueChange={(value) => updateGeneral("maritalStatus", value)}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="married">Married</SelectItem>
-                        <SelectItem value="divorced">Divorced</SelectItem>
-                        <SelectItem value="widowed">Widowed</SelectItem>
-                        <SelectItem value="separated">Separated</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+  ) : (
+    <form onSubmit={handleSubmitIntake} className="space-y-6">
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>General Information</CardTitle>
+          <CardDescription>As printed on your passport</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Full legal name</Label>
+              <Input value={formData.intakeForm.generalInformation.fullLegalName} onChange={(e) => updateGeneral("fullLegalName", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Other names / aliases</Label>
+              <Input value={formData.intakeForm.generalInformation.otherNames} onChange={(e) => updateGeneral("otherNames", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Date of birth</Label>
+              <Input type="date" value={formData.intakeForm.generalInformation.dateOfBirth} onChange={(e) => updateGeneral("dateOfBirth", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>City and country of birth</Label>
+              <Input value={formData.intakeForm.generalInformation.birthCityCountry} onChange={(e) => updateGeneral("birthCityCountry", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Citizenship / nationality (comma separated)</Label>
+              <Input
+                value={formData.intakeForm.generalInformation.citizenshipCountries.join(", ")}
+                onChange={(e) => updateGeneral("citizenshipCountries", e.target.value.split(",").map((c) => c.trim()))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Gender</Label>
+              <Select value={formData.intakeForm.generalInformation.gender} onValueChange={(value) => updateGeneral("gender", value)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Marital status</Label>
+              <Select value={formData.intakeForm.generalInformation.maritalStatus} onValueChange={(value) => updateGeneral("maritalStatus", value)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Single</SelectItem>
+                  <SelectItem value="married">Married</SelectItem>
+                  <SelectItem value="divorced">Divorced</SelectItem>
+                  <SelectItem value="widowed">Widowed</SelectItem>
+                  <SelectItem value="separated">Separated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>City</Label>
-                    <Input value={formData.intakeForm.generalInformation.address.city} onChange={(e) => updateGeneralAddress("city", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>State</Label>
-                    <Input value={formData.intakeForm.generalInformation.address.state} onChange={(e) => updateGeneralAddress("state", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>ZIP</Label>
-                    <Input value={formData.intakeForm.generalInformation.address.zip} onChange={(e) => updateGeneralAddress("zip", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Country</Label>
-                    <Input value={formData.intakeForm.generalInformation.address.country} onChange={(e) => updateGeneralAddress("country", e.target.value)} required />
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>City</Label>
+              <Input value={formData.intakeForm.generalInformation.address.city} onChange={(e) => updateGeneralAddress("city", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>State</Label>
+              <Input value={formData.intakeForm.generalInformation.address.state} onChange={(e) => updateGeneralAddress("state", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>ZIP</Label>
+              <Input value={formData.intakeForm.generalInformation.address.zip} onChange={(e) => updateGeneralAddress("zip", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Country</Label>
+              <Input value={formData.intakeForm.generalInformation.address.country} onChange={(e) => updateGeneralAddress("country", e.target.value)} required />
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Phone (mobile)</Label>
-                    <Input value={formData.intakeForm.generalInformation.phoneMobile} onChange={(e) => updateGeneral("phoneMobile", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Other phone</Label>
-                    <Input value={formData.intakeForm.generalInformation.phoneOther} onChange={(e) => updateGeneral("phoneOther", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" value={formData.intakeForm.generalInformation.email} onChange={(e) => updateGeneral("email", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Preferred contact method</Label>
-                    <Select value={formData.intakeForm.generalInformation.preferredContactMethod} onValueChange={(value) => updateGeneral("preferredContactMethod", value)}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="phone">Phone</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Phone (mobile)</Label>
+              <Input value={formData.intakeForm.generalInformation.phoneMobile} onChange={(e) => updateGeneral("phoneMobile", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Other phone</Label>
+              <Input value={formData.intakeForm.generalInformation.phoneOther} onChange={(e) => updateGeneral("phoneOther", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={formData.intakeForm.generalInformation.email} onChange={(e) => updateGeneral("email", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Preferred contact method</Label>
+              <Select value={formData.intakeForm.generalInformation.preferredContactMethod} onValueChange={(value) => updateGeneral("preferredContactMethod", value)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="phone">Phone</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Immigration Status & Travel</CardTitle>
-                <CardDescription>Tell us about your U.S. travel history</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Checkbox id="beenToUS" checked={formData.intakeForm.immigrationHistory.beenToUS} onCheckedChange={(checked) => updateImmigration("beenToUS", !!checked)} />
-                  <Label htmlFor="beenToUS" className="text-sm">I have been to the United States before</Label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date of last entry</Label>
-                    <Input type="date" value={formData.intakeForm.immigrationHistory.lastEntryDate} onChange={(e) => updateImmigration("lastEntryDate", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Place of last entry (city, state)</Label>
-                    <Input value={formData.intakeForm.immigrationHistory.lastEntryPlace} onChange={(e) => updateImmigration("lastEntryPlace", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Manner of last entry</Label>
-                    <Select value={formData.intakeForm.immigrationHistory.mannerOfLastEntry} onValueChange={(value) => updateImmigration("mannerOfLastEntry", value)}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="visa">Visa</SelectItem>
-                        <SelectItem value="visa_waiver">Visa Waiver</SelectItem>
-                        <SelectItem value="parole">Parole</SelectItem>
-                        <SelectItem value="without_inspection">Without inspection</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Class of admission (e.g., B-2)</Label>
-                    <Input value={formData.intakeForm.immigrationHistory.classOfAdmission} onChange={(e) => updateImmigration("classOfAdmission", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>I-94 number</Label>
-                    <Input value={formData.intakeForm.immigrationHistory.i94Number} onChange={(e) => updateImmigration("i94Number", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Current immigration status</Label>
-                    <Select value={formData.intakeForm.immigrationHistory.currentStatus} onValueChange={(value) => updateImmigration("currentStatus", value)}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="visitor">Visitor</SelectItem>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="worker">Worker</SelectItem>
-                        <SelectItem value="tps">TPS</SelectItem>
-                        <SelectItem value="daca">DACA</SelectItem>
-                        <SelectItem value="permanent_resident">Permanent Resident</SelectItem>
-                        <SelectItem value="citizen">U.S. Citizen</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Immigration Status & Travel</CardTitle>
+          <CardDescription>Tell us about your U.S. travel history</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Checkbox id="beenToUS" checked={formData.intakeForm.immigrationHistory.beenToUS} onCheckedChange={(checked) => updateImmigration("beenToUS", !!checked)} />
+            <Label htmlFor="beenToUS" className="text-sm">I have been to the United States before</Label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date of last entry</Label>
+              <Input type="date" value={formData.intakeForm.immigrationHistory.lastEntryDate} onChange={(e) => updateImmigration("lastEntryDate", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Place of last entry (city, state)</Label>
+              <Input value={formData.intakeForm.immigrationHistory.lastEntryPlace} onChange={(e) => updateImmigration("lastEntryPlace", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Manner of last entry</Label>
+              <Select value={formData.intakeForm.immigrationHistory.mannerOfLastEntry} onValueChange={(value) => updateImmigration("mannerOfLastEntry", value)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="visa">Visa</SelectItem>
+                  <SelectItem value="visa_waiver">Visa Waiver</SelectItem>
+                  <SelectItem value="parole">Parole</SelectItem>
+                  <SelectItem value="without_inspection">Without inspection</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Class of admission (e.g., B-2)</Label>
+              <Input value={formData.intakeForm.immigrationHistory.classOfAdmission} onChange={(e) => updateImmigration("classOfAdmission", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>I-94 number</Label>
+              <Input value={formData.intakeForm.immigrationHistory.i94Number} onChange={(e) => updateImmigration("i94Number", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Current immigration status</Label>
+              <Select value={formData.intakeForm.immigrationHistory.currentStatus} onValueChange={(value) => updateImmigration("currentStatus", value)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="visitor">Visitor</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="worker">Worker</SelectItem>
+                  <SelectItem value="tps">TPS</SelectItem>
+                  <SelectItem value="daca">DACA</SelectItem>
+                  <SelectItem value="permanent_resident">Permanent Resident</SelectItem>
+                  <SelectItem value="citizen">U.S. Citizen</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Passport & ID</CardTitle>
-                <CardDescription>Include your latest passport details</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Passport country</Label>
-                  <Input value={formData.intakeForm.passportInformation.passportCountry} onChange={(e) => updatePassport("passportCountry", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Passport number</Label>
-                  <Input value={formData.intakeForm.passportInformation.passportNumber} onChange={(e) => updatePassport("passportNumber", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Date issued</Label>
-                  <Input type="date" value={formData.intakeForm.passportInformation.issuedDate} onChange={(e) => updatePassport("issuedDate", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Expiration date</Label>
-                  <Input type="date" value={formData.intakeForm.passportInformation.expirationDate} onChange={(e) => updatePassport("expirationDate", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Place of issue</Label>
-                  <Input value={formData.intakeForm.passportInformation.placeOfIssue} onChange={(e) => updatePassport("placeOfIssue", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Alien number (A-Number)</Label>
-                  <Input value={formData.intakeForm.passportInformation.alienNumber} onChange={(e) => updatePassport("alienNumber", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>U.S. Social Security Number</Label>
-                  <Input value={formData.intakeForm.passportInformation.ssn} onChange={(e) => updatePassport("ssn", e.target.value)} />
-                </div>
-              </CardContent>
-            </Card>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Passport & ID</CardTitle>
+          <CardDescription>Include your latest passport details</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Passport country</Label>
+            <Input value={formData.intakeForm.passportInformation.passportCountry} onChange={(e) => updatePassport("passportCountry", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Passport number</Label>
+            <Input value={formData.intakeForm.passportInformation.passportNumber} onChange={(e) => updatePassport("passportNumber", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Date issued</Label>
+            <Input type="date" value={formData.intakeForm.passportInformation.issuedDate} onChange={(e) => updatePassport("issuedDate", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Expiration date</Label>
+            <Input type="date" value={formData.intakeForm.passportInformation.expirationDate} onChange={(e) => updatePassport("expirationDate", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Place of issue</Label>
+            <Input value={formData.intakeForm.passportInformation.placeOfIssue} onChange={(e) => updatePassport("placeOfIssue", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Alien number (A-Number)</Label>
+            <Input value={formData.intakeForm.passportInformation.alienNumber} onChange={(e) => updatePassport("alienNumber", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>U.S. Social Security Number</Label>
+            <Input value={formData.intakeForm.passportInformation.ssn} onChange={(e) => updatePassport("ssn", e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Education & Employment</CardTitle>
-                <CardDescription>Tell us about your background</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Highest education completed</Label>
-                  <Select value={formData.intakeForm.educationEmployment.highestEducation} onValueChange={(value) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      educationEmployment: {
-                        ...prev.intakeForm.educationEmployment,
-                        highestEducation: value
-                      }
-                    }
-                  }))}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="less_than_high_school">Less than high school</SelectItem>
-                      <SelectItem value="high_school">High school</SelectItem>
-                      <SelectItem value="diploma">Diploma</SelectItem>
-                      <SelectItem value="bachelor">Bachelor</SelectItem>
-                      <SelectItem value="master">Master</SelectItem>
-                      <SelectItem value="phd">PhD</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Education & Employment</CardTitle>
+          <CardDescription>Tell us about your background</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Highest education completed</Label>
+            <Select value={formData.intakeForm.educationEmployment.highestEducation} onValueChange={(value) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                educationEmployment: {
+                  ...prev.intakeForm.educationEmployment,
+                  highestEducation: value
+                }
+              }
+            }))}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="less_than_high_school">Less than high school</SelectItem>
+                <SelectItem value="high_school">High school</SelectItem>
+                <SelectItem value="diploma">Diploma</SelectItem>
+                <SelectItem value="bachelor">Bachelor</SelectItem>
+                <SelectItem value="master">Master</SelectItem>
+                <SelectItem value="phd">PhD</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Education history (secondary and above)</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={addEducationItem}>Add school</Button>
-                  </div>
-                  <div className="space-y-3">
-                    {formData.intakeForm.educationEmployment.educationList.map((item, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-slate-100 rounded-md p-3">
-                        <Input placeholder="School / University" value={item.school} onChange={(e) => updateEducationItem(idx, "school", e.target.value)} />
-                        <Input placeholder="Degree / Field" value={item.degreeField} onChange={(e) => updateEducationItem(idx, "degreeField", e.target.value)} />
-                        <Input placeholder="Country" value={item.country} onChange={(e) => updateEducationItem(idx, "country", e.target.value)} />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input placeholder="From" value={item.yearsFrom} onChange={(e) => updateEducationItem(idx, "yearsFrom", e.target.value)} />
-                          <Input placeholder="To" value={item.yearsTo} onChange={(e) => updateEducationItem(idx, "yearsTo", e.target.value)} />
-                        </div>
-                      </div>
-                    ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Education history (secondary and above)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addEducationItem}>Add school</Button>
+            </div>
+            <div className="space-y-3">
+              {formData.intakeForm.educationEmployment.educationList.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-slate-100 rounded-md p-3">
+                  <Input placeholder="School / University" value={item.school} onChange={(e) => updateEducationItem(idx, "school", e.target.value)} />
+                  <Input placeholder="Degree / Field" value={item.degreeField} onChange={(e) => updateEducationItem(idx, "degreeField", e.target.value)} />
+                  <Input placeholder="Country" value={item.country} onChange={(e) => updateEducationItem(idx, "country", e.target.value)} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="From" value={item.yearsFrom} onChange={(e) => updateEducationItem(idx, "yearsFrom", e.target.value)} />
+                    <Input placeholder="To" value={item.yearsTo} onChange={(e) => updateEducationItem(idx, "yearsTo", e.target.value)} />
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label>Current employer</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Input placeholder="Company name" value={formData.intakeForm.educationEmployment.currentEmployer.companyName} onChange={(e) => updateEmployment("companyName", e.target.value)} />
-                    <Input placeholder="Position / Job title" value={formData.intakeForm.educationEmployment.currentEmployer.position} onChange={(e) => updateEmployment("position", e.target.value)} />
-                    <Input type="date" placeholder="Start date" value={formData.intakeForm.educationEmployment.currentEmployer.startDate} onChange={(e) => updateEmployment("startDate", e.target.value)} />
-                    <Input placeholder="Address" value={formData.intakeForm.educationEmployment.currentEmployer.address} onChange={(e) => updateEmployment("address", e.target.value)} />
-                    <Input placeholder="Work phone/email" value={formData.intakeForm.educationEmployment.currentEmployer.workContact} onChange={(e) => updateEmployment("workContact", e.target.value)} />
-                  </div>
-                </div>
+          <div className="space-y-2">
+            <Label>Current employer</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input placeholder="Company name" value={formData.intakeForm.educationEmployment.currentEmployer.companyName} onChange={(e) => updateEmployment("companyName", e.target.value)} />
+              <Input placeholder="Position / Job title" value={formData.intakeForm.educationEmployment.currentEmployer.position} onChange={(e) => updateEmployment("position", e.target.value)} />
+              <Input type="date" placeholder="Start date" value={formData.intakeForm.educationEmployment.currentEmployer.startDate} onChange={(e) => updateEmployment("startDate", e.target.value)} />
+              <Input placeholder="Address" value={formData.intakeForm.educationEmployment.currentEmployer.address} onChange={(e) => updateEmployment("address", e.target.value)} />
+              <Input placeholder="Work phone/email" value={formData.intakeForm.educationEmployment.currentEmployer.workContact} onChange={(e) => updateEmployment("workContact", e.target.value)} />
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label>Previous relevant employment (last 5 years)</Label>
-                  <Textarea rows={3} value={formData.intakeForm.educationEmployment.previousEmployment} onChange={(e) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      educationEmployment: {
-                        ...prev.intakeForm.educationEmployment,
-                        previousEmployment: e.target.value
-                      }
-                    }
-                  }))} />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-2">
+            <Label>Previous relevant employment (last 5 years)</Label>
+            <Textarea rows={3} value={formData.intakeForm.educationEmployment.previousEmployment} onChange={(e) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                educationEmployment: {
+                  ...prev.intakeForm.educationEmployment,
+                  previousEmployment: e.target.value
+                }
+              }
+            }))} />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Purpose of Consultation</CardTitle>
-                <CardDescription>Select all that apply</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  "Family petition",
-                  "Employment or work visa",
-                  "Student or exchange visa",
-                  "Green card (permanent residence)",
-                  "Naturalization/citizenship",
-                  "Asylum or humanitarian relief",
-                  "Removal/deportation defense"
-                ].map((item) => (
-                  <label key={item} className="flex items-center gap-3 text-sm text-slate-700">
-                    <Checkbox checked={formData.intakeForm.consultation.purposes.includes(item)} onCheckedChange={() => togglePurpose(item)} />
-                    <span>{item}</span>
-                  </label>
-                ))}
-                <div className="space-y-2">
-                  <Label>Other</Label>
-                  <Input value={formData.intakeForm.consultation.otherPurpose} onChange={(e) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      consultation: {
-                        ...prev.intakeForm.consultation,
-                        otherPurpose: e.target.value
-                      }
-                    }
-                  }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Describe your situation and goals</Label>
-                  <Textarea rows={4} value={formData.intakeForm.consultation.description} onChange={(e) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      consultation: {
-                        ...prev.intakeForm.consultation,
-                        description: e.target.value
-                      }
-                    }
-                  }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>How did you hear about us?</Label>
-                  <Select value={formData.intakeForm.consultation.howHeard} onValueChange={(value) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      consultation: {
-                        ...prev.intakeForm.consultation,
-                        howHeard: value
-                      }
-                    }
-                  }))}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="referral">Referral (friend/family)</SelectItem>
-                      <SelectItem value="internet">Internet</SelectItem>
-                      <SelectItem value="organization">Organization</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input placeholder="Other (optional)" value={formData.intakeForm.consultation.howHeardOther} onChange={(e) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      consultation: {
-                        ...prev.intakeForm.consultation,
-                        howHeardOther: e.target.value
-                      }
-                    }
-                  }))} />
-                </div>
-              </CardContent>
-            </Card>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Purpose of Consultation</CardTitle>
+          <CardDescription>Select all that apply</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            "Family petition",
+            "Employment or work visa",
+            "Student or exchange visa",
+            "Green card (permanent residence)",
+            "Naturalization/citizenship",
+            "Asylum or humanitarian relief",
+            "Removal/deportation defense"
+          ].map((item) => (
+            <label key={item} className="flex items-center gap-3 text-sm text-slate-700">
+              <Checkbox checked={formData.intakeForm.consultation.purposes.includes(item)} onCheckedChange={() => togglePurpose(item)} />
+              <span>{item}</span>
+            </label>
+          ))}
+          <div className="space-y-2">
+            <Label>Other</Label>
+            <Input value={formData.intakeForm.consultation.otherPurpose} onChange={(e) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                consultation: {
+                  ...prev.intakeForm.consultation,
+                  otherPurpose: e.target.value
+                }
+              }
+            }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>Describe your situation and goals</Label>
+            <Textarea rows={4} value={formData.intakeForm.consultation.description} onChange={(e) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                consultation: {
+                  ...prev.intakeForm.consultation,
+                  description: e.target.value
+                }
+              }
+            }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>How did you hear about us?</Label>
+            <Select value={formData.intakeForm.consultation.howHeard} onValueChange={(value) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                consultation: {
+                  ...prev.intakeForm.consultation,
+                  howHeard: value
+                }
+              }
+            }))}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="referral">Referral (friend/family)</SelectItem>
+                <SelectItem value="internet">Internet</SelectItem>
+                <SelectItem value="organization">Organization</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input placeholder="Other (optional)" value={formData.intakeForm.consultation.howHeardOther} onChange={(e) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                consultation: {
+                  ...prev.intakeForm.consultation,
+                  howHeardOther: e.target.value
+                }
+              }
+            }))} />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Documents You Can Bring</CardTitle>
-                <CardDescription>Check what you can provide</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
-                {["passport", "visas", "workPermits", "certificates", "priorApplications", "taxFinancials"].map((item) => (
-                  <label key={item} className="flex items-center gap-3">
-                    <Checkbox checked={formData.intakeForm.documentsProvided[item]} onCheckedChange={() => toggleDocument(item)} />
-                    <span className="capitalize">{item.replace(/([A-Z])/g, " $1")}</span>
-                  </label>
-                ))}
-              </CardContent>
-            </Card>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Documents You Can Bring</CardTitle>
+          <CardDescription>Check what you can provide</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
+          {["passport", "visas", "workPermits", "certificates", "priorApplications", "taxFinancials"].map((item) => (
+            <label key={item} className="flex items-center gap-3">
+              <Checkbox checked={formData.intakeForm.documentsProvided[item]} onCheckedChange={() => toggleDocument(item)} />
+              <span className="capitalize">{item.replace(/([A-Z])/g, " $1")}</span>
+            </label>
+          ))}
+        </CardContent>
+      </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Finalize</CardTitle>
-                <CardDescription>Set urgency and acknowledge</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <Select value={formData.priority} onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value }))}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Visa type (for routing)</Label>
-                    <Select value={formData.visaType} onValueChange={(value) => setFormData((prev) => ({ ...prev, visaType: value }))}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tourist">Tourist</SelectItem>
-                        <SelectItem value="business">Business</SelectItem>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="work">Work</SelectItem>
-                        <SelectItem value="family">Family</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <label className="flex items-start gap-3 text-sm text-slate-700">
-                  <Checkbox checked={formData.intakeForm.acknowledgment.agreed} onCheckedChange={(checked) => setFormData((prev) => ({
-                    ...prev,
-                    intakeForm: {
-                      ...prev.intakeForm,
-                      acknowledgment: { agreed: !!checked }
-                    }
-                  }))} />
-                  <span>This intake form is for preliminary evaluation only and does not create an attorney–client relationship.</span>
-                </label>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Finalize</CardTitle>
+          <CardDescription>Set urgency and acknowledge</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={formData.priority} onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value }))}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Visa type (for routing)</Label>
+              <Select value={formData.visaType} onValueChange={(value) => setFormData((prev) => ({ ...prev, visaType: value }))}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tourist">Tourist</SelectItem>
+                  <SelectItem value="business">Business</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="work">Work</SelectItem>
+                  <SelectItem value="family">Family</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <label className="flex items-start gap-3 text-sm text-slate-700">
+            <Checkbox checked={formData.intakeForm.acknowledgment.agreed} onCheckedChange={(checked) => setFormData((prev) => ({
+              ...prev,
+              intakeForm: {
+                ...prev.intakeForm,
+                acknowledgment: { agreed: !!checked }
+              }
+            }))} />
+            <span>This intake form is for preliminary evaluation only and does not create an attorney–client relationship.</span>
+          </label>
 
-                <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={submitting}>
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Submit Intake Form
-                </Button>
-              </CardContent>
-            </Card>
-          </form>
-        )}
-      </main>
-    </div>
+          <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={submitting}>
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Submit Intake Form
+          </Button>
+        </CardContent>
+      </Card>
+    </form>
+  )
+}
+      </main >
+    </div >
   );
 };
 

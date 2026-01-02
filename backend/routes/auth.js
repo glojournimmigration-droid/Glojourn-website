@@ -2,12 +2,13 @@ const express = require('express');
 const { body } = require('express-validator');
 const {
   signup,
+  createUser,
   login,
   getProfile,
   updateProfile,
   changePassword
 } = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -63,6 +64,7 @@ const changePasswordValidation = [
 ];
 
 // Routes
+router.post('/create-user', authenticateToken, requireRole('admin'), signupValidation, createUser);
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
 router.get('/profile', authenticateToken, getProfile);

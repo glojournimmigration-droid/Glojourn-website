@@ -1,4 +1,6 @@
 const { validationResult } = require('express-validator');
+const fs = require('fs');
+const path = require('path');
 const Document = require('../models/Document');
 const Case = require('../models/Case');
 
@@ -64,6 +66,27 @@ exports.uploadDocument = async (req, res) => {
             }
         }
 
+        // Replace existing documents of the same type for this application
+        const docsToReplace = await Document.find({ application_id, document_type });
+        for (const doc of docsToReplace) {
+            try {
+                const absolutePath = path.isAbsolute(doc.file_path)
+                    ? doc.file_path
+                    : path.join(__dirname, '..', doc.file_path);
+                if (fs.existsSync(absolutePath)) {
+                    fs.unlinkSync(absolutePath);
+                }
+            } catch (cleanupErr) {
+                console.warn('Failed to remove old document file:', cleanupErr.message);
+            }
+
+            // Remove document reference from the application
+            application.documents = (application.documents || []).filter(
+                (id) => id.toString() !== doc._id.toString()
+            );
+            await doc.deleteOne();
+        }
+
         // Create document record
         const document = new Document({
             file_name: req.file.originalname,
@@ -120,6 +143,60 @@ exports.requestDocument = async (req, res) => {
         res.json({ message: 'Document request sent successfully' });
     } catch (error) {
         console.error('Request document error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get document requests for a user
+// @route   GET /api/document-requests
+// @access  Private
+exports.getDocumentRequests = async (req, res) => {
+    try {
+        // Find application for this user
+        // If staff, they might provide application_id query param? 
+        // For now, let's assume this is primarily for the client to see THEIR requests.
+
+        let query = {};
+        if (req.user.role === 'client') {
+            query.client = req.user._id;
+        } else {
+            // If staff, we likely need an application_id in query
+            if (req.query.application_id) {
+                query._id = req.query.application_id;
+            } else {
+                return res.status(400).json({ message: 'Application ID required for staff' });
+            }
+        }
+
+        const application = await Case.findOne(query).populate('notes.createdBy', 'name role');
+
+        if (!application) {
+            return res.json({ requests: [] });
+        }
+
+        // Filter notes that look like document requests
+        // Format: "Document Requested: {type}. Message: {msg}"
+        const Requests = application.notes
+            .filter(note => note.content && note.content.startsWith('Document Requested:'))
+            .map(note => {
+                // Parse content
+                const content = note.content;
+                const typeMatch = content.match(/Document Requested: (.*?)\./);
+                const msgMatch = content.match(/Message: (.*)/);
+
+                return {
+                    id: note._id,
+                    document_type: typeMatch ? typeMatch[1] : 'Unknown',
+                    message: msgMatch ? msgMatch[1] : '',
+                    created_at: note.createdAt,
+                    created_by: note.createdBy
+                };
+            })
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        res.json({ requests: Requests });
+    } catch (error) {
+        console.error('Get document requests error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

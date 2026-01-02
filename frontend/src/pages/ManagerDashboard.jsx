@@ -277,7 +277,25 @@ const ManagerDashboard = () => {
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
-                                <DialogTitle>Application Details</DialogTitle>
+                                <div className="flex justify-between items-center pr-8">
+                                  <DialogTitle>Application Details</DialogTitle>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedApp, null, 2));
+                                      const downloadAnchorNode = document.createElement('a');
+                                      downloadAnchorNode.setAttribute("href", dataStr);
+                                      downloadAnchorNode.setAttribute("download", `application_${selectedApp.case_number || selectedApp.id}.json`);
+                                      document.body.appendChild(downloadAnchorNode); // required for firefox
+                                      downloadAnchorNode.click();
+                                      downloadAnchorNode.remove();
+                                    }}
+                                  >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Download JSON
+                                  </Button>
+                                </div>
                               </DialogHeader>
                               <ScrollArea className="max-h-[60vh]">
                                 <div className="space-y-4 pt-4">
@@ -370,13 +388,16 @@ const ManagerDashboard = () => {
                                       <SelectValue placeholder="Select document type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="passport">Passport</SelectItem>
-                                      <SelectItem value="photo">Passport Photo</SelectItem>
-                                      <SelectItem value="bank_statement">Bank Statement</SelectItem>
-                                      <SelectItem value="employment_letter">Employment Letter</SelectItem>
-                                      <SelectItem value="invitation_letter">Invitation Letter</SelectItem>
-                                      <SelectItem value="travel_itinerary">Travel Itinerary</SelectItem>
-                                      <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="passport">Passport</SelectItem>
+                                        <SelectItem value="visas">U.S. Visas / I-94</SelectItem>
+                                        <SelectItem value="work_permits">Work Permits / EAD</SelectItem>
+                                        <SelectItem value="certificates">Birth / Marriage / Divorce Certificates</SelectItem>
+                                        <SelectItem value="prior_applications">Prior Immigration Applications / Notices</SelectItem>
+                                        <SelectItem value="tax_financials">Tax Returns / Financials</SelectItem>
+                                        <SelectItem value="id_proof">Government ID Proof</SelectItem>
+                                        <SelectItem value="financial">Financial Documents</SelectItem>
+                                        <SelectItem value="educational">Educational Records</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>

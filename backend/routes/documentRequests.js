@@ -15,4 +15,15 @@ router.post('/', [
     body('message').optional().isString()
 ], requestDocument);
 
+// Get document requests for the current user's application
+router.get('/', async (req, res) => {
+    try {
+        const { getDocumentRequests } = require('../controllers/documentController');
+        await getDocumentRequests(req, res);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

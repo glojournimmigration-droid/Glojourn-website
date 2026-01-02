@@ -20,13 +20,20 @@ const getMissingRequiredDocs = (application) => {
 const formatApplication = (caseDoc) => {
   const documents = Array.isArray(caseDoc.documents)
     ? caseDoc.documents.map((doc) => ({
-        id: doc._id?.toString?.() || String(doc),
-        file_name: doc.file_name,
-        document_type: doc.document_type,
-        status: doc.status,
-        uploaded_at: doc.createdAt,
-      }))
+      id: doc._id?.toString?.() || String(doc),
+      file_name: doc.file_name,
+      document_type: doc.document_type,
+      status: doc.status,
+      uploaded_at: doc.createdAt,
+    }))
     : [];
+
+  const intake = caseDoc.intakeForm || {};
+  const general = intake.generalInformation || {};
+  const immigration = intake.immigrationHistory || {};
+  const passport = intake.passportInformation || {};
+  const educationEmployment = intake.educationEmployment || {};
+  const address = general.address || {};
 
   return {
     id: caseDoc._id.toString(),
@@ -34,8 +41,16 @@ const formatApplication = (caseDoc) => {
     client_id: caseDoc.client?._id?.toString() || null,
     client_name: caseDoc.client?.name,
     client_email: caseDoc.client?.email,
-    assigned_coordinator: caseDoc.assignedCoordinator?._id?.toString() || null,
-    assigned_manager: caseDoc.assignedManager?._id?.toString() || null,
+    assigned_coordinator: caseDoc.assignedCoordinator ? {
+      id: caseDoc.assignedCoordinator._id?.toString(),
+      name: caseDoc.assignedCoordinator.name,
+      email: caseDoc.assignedCoordinator.email
+    } : null,
+    assigned_manager: caseDoc.assignedManager ? {
+      id: caseDoc.assignedManager._id?.toString(),
+      name: caseDoc.assignedManager.name,
+      email: caseDoc.assignedManager.email
+    } : null,
     status: caseDoc.status,
     priority: caseDoc.priority,
     personal_details: {
@@ -46,8 +61,35 @@ const formatApplication = (caseDoc) => {
       intended_length_of_stay: caseDoc.applicationDetails?.intendedLengthOfStay,
       accommodation_details: caseDoc.applicationDetails?.accommodationDetails,
       financial_info: caseDoc.applicationDetails?.financialInfo,
+      full_name: general.fullLegalName,
+      other_names: general.otherNames,
+      date_of_birth: general.dateOfBirth,
+      birth_place: general.birthCityCountry,
+      citizenship: general.citizenshipCountries,
+      gender: general.gender,
+      marital_status: general.maritalStatus,
+      address: [address.city, address.state, address.zip, address.country]
+        .filter(Boolean)
+        .join(', '),
+      phone_mobile: general.phoneMobile,
+      phone_other: general.phoneOther,
+      preferred_contact_method: general.preferredContactMethod,
+      immigration_status: immigration.currentStatus,
+      last_entry_date: immigration.lastEntryDate,
+      last_entry_place: immigration.lastEntryPlace,
+      manner_of_last_entry: immigration.mannerOfLastEntry,
+      class_of_admission: immigration.classOfAdmission,
+      i94_number: immigration.i94Number,
+      passport_country: passport.passportCountry,
+      passport_number: passport.passportNumber,
+      passport_issue_date: passport.issuedDate,
+      passport_expiration_date: passport.expirationDate,
+      passport_place_of_issue: passport.placeOfIssue,
+      alien_number: passport.alienNumber,
+      ssn: passport.ssn,
+      highest_education: educationEmployment.highestEducation,
     },
-    intake_form: caseDoc.intakeForm || null,
+    intake_form: intake || null,
     documents,
     created_at: caseDoc.createdAt,
     updated_at: caseDoc.updatedAt,
@@ -195,7 +237,7 @@ const updateApplication = async (req, res) => {
 
     // Check permissions
     if (application.client.toString() !== req.user._id.toString() &&
-        !['admin', 'coordinator', 'manager'].includes(req.user.role)) {
+      !['admin', 'coordinator', 'manager'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

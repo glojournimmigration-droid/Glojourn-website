@@ -46,6 +46,14 @@ const getStats = async (req, res) => {
       id: caseDoc._id.toString(),
       client_name: caseDoc.client?.name,
       client_email: caseDoc.client?.email,
+      assigned_coordinator: caseDoc.assignedCoordinator ? {
+        name: caseDoc.assignedCoordinator.name,
+        email: caseDoc.assignedCoordinator.email
+      } : null,
+      assigned_manager: caseDoc.assignedManager ? {
+        name: caseDoc.assignedManager.name,
+        email: caseDoc.assignedManager.email
+      } : null,
       personal_details: {
         visa_type: caseDoc.visaType,
         destination_country: caseDoc.applicationDetails?.destinationCountry
