@@ -6,13 +6,13 @@
 
 :root {
   /* New Design Config */
-  --primary-navy: #0B132B;
+  --primary-navy: #060d21;
   --accent-gold: #FFD700;
   --accent-gold-dim: #D4B200;
-  --highlight-teal: #0B132B;
+  --highlight-teal: #060d20;
   --pure-white: #FFFFFF;
   --off-white: #F9F9F9;
-  --text-dark: #333333;
+  --text-dark: #262525;
   --text-light: #E0E0E0;
 
   /* Shadcn/Tailwind Variables (HSL) */

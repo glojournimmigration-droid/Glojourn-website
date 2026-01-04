@@ -122,7 +122,7 @@ const LandingPage = () => {
         <div className="hero-content">
           <h2 id="hero-heading" className="hero-title">
             Turning borders into beginnings</h2>
-          <p>From visa applications to seamless relocations, trust our 20+ years of expertise to navigate your path abroad. The world is waiting.</p>
+          <p>Crossing borders is more than paperwork it’s a defining chapter in someone’s life or a strategic move for a business. GloJourn exists to make that chapter seamless. We guide individuals, families, and organizations through global immigration pathways with clarity, precision, and unwavering respect for privacy. At GloJourn, every journey is personal, and every partnership matters and we’re here to help you navigate the world with confidence.</p>
           <button onClick={() => navigate("/login")} className="btn-custom btn-primary-custom">Start Your Consultation</button>
         </div>
       </section>
