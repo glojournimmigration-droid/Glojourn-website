@@ -8,9 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 import {
-  Globe, LayoutDashboard, Users, FileText, LogOut, Loader2, User, UserPlus, Eye, CheckCircle2
+  Globe, LayoutDashboard, Users, FileText, LogOut, Loader2, User, UserPlus, Eye, CheckCircle2, FileCheck, Send
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const CoordinatorDashboard = () => {
@@ -23,6 +26,13 @@ const CoordinatorDashboard = () => {
   const [selectedManager, setSelectedManager] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+
+  // Request Document State
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestDocType, setRequestDocType] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
+  const [sendingRequest, setSendingRequest] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -63,6 +73,30 @@ const CoordinatorDashboard = () => {
       toast.error(error.response?.data?.message || "Failed to assign");
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleRequestDocument = async () => {
+    if (!requestDocType || !requestMessage) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSendingRequest(true);
+    try {
+      await apiClient.post("/document-requests", {
+        application_id: selectedApp.id,
+        document_type: requestDocType,
+        message: requestMessage
+      });
+      toast.success("Document request sent to client");
+      setRequestDialogOpen(false);
+      setRequestDocType("");
+      setRequestMessage("");
+      fetchData();
+    } catch {
+      toast.error("Failed to send request");
+    } finally {
+      setSendingRequest(false);
     }
   };
 
@@ -224,57 +258,47 @@ const CoordinatorDashboard = () => {
                       <TableCell>{app.documents?.length || 0}</TableCell>
                       <TableCell>{new Date(app.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Dialog open={dialogOpen && selectedApp?.id === app.id} onOpenChange={(open) => {
-                          setDialogOpen(open);
-                          if (!open) setSelectedApp(null);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              className="bg-teal-600 hover:bg-teal-700"
-                              onClick={() => setSelectedApp(app)}
-                              data-testid={`assign-btn-${app.id}`}
-                            >
-                              <UserPlus className="w-4 h-4 mr-1" /> Assign
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Assign Application to Manager</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 pt-4">
-                              <div className="p-4 bg-slate-50 rounded-sm">
-                                <p className="font-medium">{app.client_name}</p>
-                                <p className="text-sm text-slate-600">{app.client_email}</p>
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {app.personal_details?.visa_type} - {app.personal_details?.destination_country}
-                                </p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium mb-2 block">Select Manager</label>
-                                <Select value={selectedManager} onValueChange={setSelectedManager}>
-                                  <SelectTrigger data-testid="select-manager">
-                                    <SelectValue placeholder="Choose a manager" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {managers.map((m) => (
-                                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <Button
-                                className="w-full bg-slate-900 hover:bg-teal-700"
-                                onClick={handleAssign}
-                                disabled={assigning || !selectedManager}
-                                data-testid="confirm-assign-btn"
-                              >
-                                {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                Confirm Assignment
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <div className="flex gap-2">
+                          {/* View Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setViewDialogOpen(true);
+                            }}
+                            data-testid={`view-btn-${app.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+
+                          {/* Assign Button */}
+                          <Button
+                            size="sm"
+                            className="bg-teal-600 hover:bg-teal-700"
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setDialogOpen(true);
+                            }}
+                            data-testid={`assign-btn-${app.id}`}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" /> Assign
+                          </Button>
+
+                          {/* Request Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setRequestDialogOpen(true);
+                            }}
+                            data-testid={`request-doc-btn-${app.id}`}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -334,6 +358,201 @@ const CoordinatorDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* --- DIALOGS (Hoisted) --- */}
+
+        {/* View Details Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+          setViewDialogOpen(open);
+          if (!open) setSelectedApp(null);
+        }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <div className="flex justify-between items-center pr-8">
+                <DialogTitle>Application Details</DialogTitle>
+                {selectedApp && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedApp, null, 2));
+                      const downloadAnchorNode = document.createElement('a');
+                      downloadAnchorNode.setAttribute("href", dataStr);
+                      downloadAnchorNode.setAttribute("download", `application_${selectedApp.case_number || selectedApp.id}.json`);
+                      document.body.appendChild(downloadAnchorNode);
+                      downloadAnchorNode.click();
+                      downloadAnchorNode.remove();
+                    }}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Download JSON
+                  </Button>
+                )}
+              </div>
+            </DialogHeader>
+            {selectedApp && (
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-500">Full Name</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.full_name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Email</Label>
+                      <p className="font-medium">{selectedApp.client_email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Passport Number</Label>
+                      <p className="font-medium font-mono">{selectedApp.personal_details?.passport_number}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Nationality</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.nationality || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Visa Type</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.visa_type || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Destination</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.destination_country || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Phone</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.phone || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500">Date of Birth</Label>
+                      <p className="font-medium">{selectedApp.personal_details?.date_of_birth || "-"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-slate-500">Address</Label>
+                    <p className="font-medium">{selectedApp.personal_details?.address || "-"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-slate-500 mb-2 block">Documents ({selectedApp.documents?.length || 0})</Label>
+                    {selectedApp.documents?.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedApp.documents.map((doc) => (
+                          <div key={doc.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-sm">
+                            <FileCheck className="w-4 h-4 text-teal-600" />
+                            <div>
+                              <p className="font-medium text-sm">{doc.file_name}</p>
+                              <p className="text-xs text-slate-500">{doc.document_type}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500">No documents uploaded</p>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Assign Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedApp(null);
+            setSelectedManager("");
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Manager</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Select Case Manager</Label>
+                <Select value={selectedManager} onValueChange={setSelectedManager}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full bg-teal-600 hover:bg-teal-700"
+                onClick={handleAssign}
+                disabled={assigning || !selectedManager}
+                data-testid="confirm-assign-btn"
+              >
+                {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Confirm Assignment"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Request Document / Notification Dialog */}
+        <Dialog open={requestDialogOpen} onOpenChange={(open) => {
+          setRequestDialogOpen(open);
+          if (!open) {
+            setSelectedApp(null);
+            setRequestDocType("");
+            setRequestMessage("");
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Notify Client / Request Document</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label>Type</Label>
+                <Select value={requestDocType} onValueChange={setRequestDocType}>
+                  <SelectTrigger className="mt-1" data-testid="request-doc-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general_notification">General Notification / Message</SelectItem>
+                    <SelectItem value="passport">Passport</SelectItem>
+                    <SelectItem value="visas">U.S. Visas / I-94</SelectItem>
+                    <SelectItem value="work_permits">Work Permits / EAD</SelectItem>
+                    <SelectItem value="certificates">Birth / Marriage / Divorce Certificates</SelectItem>
+                    <SelectItem value="prior_applications">Prior Immigration Applications / Notices</SelectItem>
+                    <SelectItem value="tax_financials">Tax Returns / Financials</SelectItem>
+                    <SelectItem value="id_proof">Government ID Proof</SelectItem>
+                    <SelectItem value="financial">Financial Documents</SelectItem>
+                    <SelectItem value="educational">Educational Records</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Message</Label>
+                <Textarea
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="mt-1"
+                  data-testid="request-message"
+                />
+              </div>
+              <Button
+                className="w-full bg-amber-600 hover:bg-amber-700"
+                onClick={handleRequestDocument}
+                disabled={sendingRequest}
+                data-testid="send-request-btn"
+              >
+                {sendingRequest ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Send
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </main>
     </div>
   );

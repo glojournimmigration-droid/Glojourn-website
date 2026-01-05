@@ -388,16 +388,17 @@ const ManagerDashboard = () => {
                                       <SelectValue placeholder="Select document type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="passport">Passport</SelectItem>
-                                        <SelectItem value="visas">U.S. Visas / I-94</SelectItem>
-                                        <SelectItem value="work_permits">Work Permits / EAD</SelectItem>
-                                        <SelectItem value="certificates">Birth / Marriage / Divorce Certificates</SelectItem>
-                                        <SelectItem value="prior_applications">Prior Immigration Applications / Notices</SelectItem>
-                                        <SelectItem value="tax_financials">Tax Returns / Financials</SelectItem>
-                                        <SelectItem value="id_proof">Government ID Proof</SelectItem>
-                                        <SelectItem value="financial">Financial Documents</SelectItem>
-                                        <SelectItem value="educational">Educational Records</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                      <SelectItem value="passport">Passport</SelectItem>
+                                      <SelectItem value="visas">U.S. Visas / I-94</SelectItem>
+                                      <SelectItem value="work_permits">Work Permits / EAD</SelectItem>
+                                      <SelectItem value="certificates">Birth / Marriage / Divorce Certificates</SelectItem>
+                                      <SelectItem value="prior_applications">Prior Immigration Applications / Notices</SelectItem>
+                                      <SelectItem value="tax_financials">Tax Returns / Financials</SelectItem>
+                                      <SelectItem value="id_proof">Government ID Proof</SelectItem>
+                                      <SelectItem value="financial">Financial Documents</SelectItem>
+                                      <SelectItem value="educational">Educational Records</SelectItem>
+                                      <SelectItem value="general_notification">General Notification / Message</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>

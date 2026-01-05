@@ -742,33 +742,42 @@ const ClientDashboard = () => {
                     {/* Document Requests List */}
                     {documentRequests.length > 0 ? (
                       <div className="space-y-4">
-                        {documentRequests.map((req) => (
-                          <div key={req.id} className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-                            <div className="flex items-start gap-3">
-                              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-amber-900 text-sm">
-                                  Request: {req.document_type.replace(/_/g, ' ').toUpperCase()}
-                                </h4>
-                                <p className="text-sm text-amber-800 mt-1">{req.message}</p>
-                                <div className="flex items-center gap-2 mt-2 text-xs text-amber-700">
-                                  <User className="w-3 h-3" />
-                                  <span>{req.created_by?.name || 'Manager'}</span>
-                                  <Clock className="w-3 h-3 ml-2" />
-                                  <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                        {documentRequests.map((req) => {
+                          const isNotification = req.document_type === 'general_notification';
+                          return (
+                            <div key={req.id} className="p-4 bg-amber-50 border border-amber-200 rounded-md">
+                              <div className="flex items-start gap-3">
+                                {isNotification ? (
+                                  <FileText className="w-5 h-5 text-amber-600 mt-0.5" />
+                                ) : (
+                                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                                )}
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-amber-900 text-sm">
+                                    {isNotification ? "MESSAGE FROM MANAGER" : `Request: ${req.document_type.replace(/_/g, ' ').toUpperCase()}`}
+                                  </h4>
+                                  <p className="text-sm text-amber-800 mt-1">{req.message}</p>
+                                  <div className="flex items-center gap-2 mt-2 text-xs text-amber-700">
+                                    <User className="w-3 h-3" />
+                                    <span>{req.created_by?.name || 'Manager'}</span>
+                                    <Clock className="w-3 h-3 ml-2" />
+                                    <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                                  </div>
                                 </div>
+                                {!isNotification && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-white border-amber-300 hover:bg-amber-100 text-amber-900"
+                                    onClick={() => document.querySelector(`[value="documents"]`)?.click()}
+                                  >
+                                    Upload
+                                  </Button>
+                                )}
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="bg-white border-amber-300 hover:bg-amber-100 text-amber-900"
-                                onClick={() => document.querySelector(`[value="documents"]`)?.click()}
-                              >
-                                Upload
-                              </Button>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-md">

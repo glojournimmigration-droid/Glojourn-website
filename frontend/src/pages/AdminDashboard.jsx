@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Globe, LayoutDashboard, Users, FileText, Calendar, LogOut, Loader2, User,
-  TrendingUp, CheckCircle2, Clock, AlertCircle, BarChart3, Plus
+  TrendingUp, CheckCircle2, Clock, AlertCircle, BarChart3, Plus, UserPlus, Eye, FileCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -24,14 +24,53 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Dialog States
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "coordinator" });
   const [createLoading, setCreateLoading] = useState(false);
 
+  // Application Management States
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedManager, setSelectedManager] = useState("");
+  const [newStatus, setNewStatus] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      // Parallel fetch for all needed data
+      const [statsRes, usersRes, sessionsRes, appsRes] = await Promise.all([
+        apiClient.get("/admin/stats"),
+        apiClient.get("/users"),
+        apiClient.get("/sessions"),
+        apiClient.get("/applications") // Admin should see all
+      ]);
+      setStats(statsRes.data);
+      setUsers(usersRes.data.users || []);
+      setSessions(sessionsRes.data.sessions || []);
+      setApplications(appsRes.data.applications || []);
+
+      // Filter managers from users list for assignment dropdown
+      const mgrs = (usersRes.data.users || []).filter(u => u.role === 'manager');
+      setManagers(mgrs);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -41,7 +80,7 @@ const AdminDashboard = () => {
       toast.success("Team member created successfully");
       setIsCreateUserOpen(false);
       setNewUser({ name: "", email: "", password: "", role: "coordinator" });
-      fetchData(); // Refresh list
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create user");
     } finally {
@@ -49,21 +88,39 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchData = async () => {
+  const handleAssign = async () => {
+    if (!selectedApp || !selectedManager) {
+      toast.error("Please select a manager");
+      return;
+    }
+    setActionLoading(true);
     try {
-      const [statsRes, usersRes, sessionsRes] = await Promise.all([
-        apiClient.get("/admin/stats"),
-        apiClient.get("/users"),
-        apiClient.get("/sessions")
-      ]);
-      setStats(statsRes.data);
-      setUsers(usersRes.data.users || []);
-      setSessions(sessionsRes.data.sessions || []);
+      await apiClient.post("/assignments", {
+        application_id: selectedApp.id,
+        manager_id: selectedManager
+      });
+      toast.success("Application assigned successfully");
+      setAssignDialogOpen(false);
+      fetchData();
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load dashboard data");
+      toast.error(error.response?.data?.message || "Failed to assign");
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedApp || !newStatus) return;
+    setActionLoading(true);
+    try {
+      await apiClient.put(`/applications/${selectedApp.id}`, { status: newStatus });
+      toast.success("Status updated successfully");
+      setStatusDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to update status");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -107,7 +164,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50" data-testid="admin-dashboard">
-      {/* Sidebar */}
+      {/* Sidebar - Same as before */}
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-6 hidden md:flex flex-col">
         <div className="flex items-center gap-2 mb-8">
           <Globe className="w-8 h-8 text-teal-600" />
@@ -148,8 +205,9 @@ const AdminDashboard = () => {
           <p className="text-slate-600 mt-1">Monitor all operations and team performance</p>
         </div>
 
-        {/* Key Metrics */}
+        {/* Key Metrics - Same as before */}
         <div className="grid md:grid-cols-5 gap-4 mb-8">
+          {/* ... keeping metrics cards ... */}
           <Card className="border-slate-200">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -255,66 +313,192 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="applications" className="space-y-6">
+        <Tabs defaultValue="applications_all" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="applications" data-testid="tab-applications">Recent Applications</TabsTrigger>
+            <TabsTrigger value="applications_all" data-testid="tab-all-applications">All Applications</TabsTrigger>
             <TabsTrigger value="team" data-testid="tab-team">Team Members</TabsTrigger>
             <TabsTrigger value="sessions" data-testid="tab-sessions">Sessions</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="applications">
+          <TabsContent value="applications_all">
             <Card className="border-slate-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-teal-600" />
-                  Recent Applications
+                  Application Management
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {stats?.recent_applications?.length > 0 ? (
+                {applications.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Visa Type</TableHead>
-                        <TableHead>Destination</TableHead>
-                        <TableHead>Assigned To</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Visa</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Documents</TableHead>
-                        <TableHead>Submitted</TableHead>
+                        <TableHead>Manager</TableHead>
+                        <TableHead>Docs</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats.recent_applications.map((app) => (
+                      {applications.map((app) => (
                         <TableRow key={app.id}>
-                          <TableCell className="font-medium">{app.client_name}</TableCell>
-                          <TableCell>{app.client_email}</TableCell>
-                          <TableCell>{app.personal_details?.visa_type || "-"}</TableCell>
-                          <TableCell>{app.personal_details?.destination_country || "-"}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col text-xs">
-                              {app.assigned_manager ? (
-                                <span className="font-medium text-slate-900">Mgr: {app.assigned_manager.name}</span>
-                              ) : <span className="text-slate-400">No Manager</span>}
-                              {app.assigned_coordinator ? (
-                                <span className="text-slate-500">Crd: {app.assigned_coordinator.name}</span>
-                              ) : <span className="text-slate-400">No Coordinator</span>}
-                            </div>
+                          <TableCell className="font-medium">
+                            <div>{app.client_name}</div>
+                            <div className="text-xs text-slate-500">{app.client_email}</div>
                           </TableCell>
+                          <TableCell>{app.personal_details?.visa_type || "-"}</TableCell>
                           <TableCell>
                             <Badge className={`${getStatusColor(app.status)} border`}>
                               {app.status.replace("_", " ").toUpperCase()}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {app.assigned_manager ?
+                              (app.assigned_manager.name || managers.find(m => m.id === app.assigned_manager)?.name || "Assigned") :
+                              <span className="text-slate-400">Not assigned</span>
+                            }
+                          </TableCell>
                           <TableCell>{app.documents?.length || 0}</TableCell>
-                          <TableCell>{new Date(app.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {/* View Details */}
+                              <Dialog open={viewDialogOpen && selectedApp?.id === app.id} onOpenChange={(open) => {
+                                setViewDialogOpen(open);
+                                if (!open) setSelectedApp(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setSelectedApp(app)}>
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <div className="flex justify-between items-center pr-8">
+                                      <DialogTitle>Application Review</DialogTitle>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedApp, null, 2));
+                                          const downloadAnchorNode = document.createElement('a');
+                                          downloadAnchorNode.setAttribute("href", dataStr);
+                                          downloadAnchorNode.setAttribute("download", `application_${selectedApp.case_number || selectedApp.id}.json`);
+                                          document.body.appendChild(downloadAnchorNode);
+                                          downloadAnchorNode.click();
+                                          downloadAnchorNode.remove();
+                                        }}
+                                      >
+                                        <FileText className="w-4 h-4 mr-2" /> JSON
+                                      </Button>
+                                    </div>
+                                  </DialogHeader>
+                                  <ScrollArea className="max-h-[60vh]">
+                                    <div className="grid grid-cols-2 gap-4 p-4">
+                                      <div>
+                                        <Label className="text-slate-500">Name</Label>
+                                        <p className="font-medium">{app.client_name}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-slate-500">Email</Label>
+                                        <p className="font-medium">{app.client_email}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-slate-500">Passport</Label>
+                                        <p className="font-medium">{app.personal_details?.passport_number || "-"}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-slate-500">Destination</Label>
+                                        <p className="font-medium">{app.personal_details?.destination_country || "-"}</p>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <Label className="text-slate-500 mb-2 block">Files</Label>
+                                        {app.documents?.length > 0 ? (
+                                          <div className="space-y-1">
+                                            {app.documents.map((d) => (
+                                              <div key={d.id} className="flex items-center gap-2 text-sm bg-slate-50 p-2 rounded">
+                                                <FileCheck className="w-3 h-3 text-teal-600" />
+                                                <span className="truncate">{d.file_name}</span>
+                                                <Badge variant="outline" className="ml-auto text-xs">{d.document_type}</Badge>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : <p className="text-sm text-slate-500">No files</p>}
+                                      </div>
+                                    </div>
+                                  </ScrollArea>
+                                </DialogContent>
+                              </Dialog>
+
+                              {/* Assign Dialog */}
+                              <Dialog open={assignDialogOpen && selectedApp?.id === app.id} onOpenChange={(open) => {
+                                setAssignDialogOpen(open);
+                                if (!open) setSelectedApp(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => setSelectedApp(app)}>
+                                    <UserPlus className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Assign Manager</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4 pt-4">
+                                    <Select value={selectedManager} onValueChange={setSelectedManager}>
+                                      <SelectTrigger><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                                      <SelectContent>
+                                        {managers.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button className="w-full" onClick={handleAssign} disabled={actionLoading}>
+                                      {actionLoading && <Loader2 className="animate-spin mr-2 w-4 h-4" />} Assign
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+
+                              {/* Status Dialog */}
+                              <Dialog open={statusDialogOpen && selectedApp?.id === app.id} onOpenChange={(open) => {
+                                setStatusDialogOpen(open);
+                                if (!open) setSelectedApp(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => {
+                                    setSelectedApp(app);
+                                    setNewStatus(app.status);
+                                  }}>
+                                    <TrendingUp className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader><DialogTitle>Update Status</DialogTitle></DialogHeader>
+                                  <div className="space-y-4 pt-4">
+                                    <Select value={newStatus} onValueChange={setNewStatus}>
+                                      <SelectTrigger><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="submitted">Submitted</SelectItem>
+                                        <SelectItem value="under_review">Under Review</SelectItem>
+                                        <SelectItem value="processing">Processing</SelectItem>
+                                        <SelectItem value="approved">Approved</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Button className="w-full" onClick={handleUpdateStatus} disabled={actionLoading}>
+                                      {actionLoading && <Loader2 className="animate-spin mr-2 w-4 h-4" />} Update
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-slate-500 text-center py-8">No applications yet</p>
+                  <p className="text-slate-500 text-center py-8">No applications found.</p>
                 )}
               </CardContent>
             </Card>
