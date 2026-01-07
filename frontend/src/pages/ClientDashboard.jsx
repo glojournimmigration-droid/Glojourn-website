@@ -448,12 +448,21 @@ const ClientDashboard = () => {
 
     setSubmitting(true);
 
+    // Update documentsProvided based on what the user actually selected to upload
+    const updatedDocumentsProvided = { ...formData.intakeForm.documentsProvided };
+    docOptions.forEach((opt) => {
+      if (selectedFiles[opt.key]) {
+        updatedDocumentsProvided[opt.flag] = true;
+      }
+    });
+
     const payload = {
       visaType: formData.visaType,
       priority: formData.priority,
       applicationDetails: {},
       intakeForm: {
         ...formData.intakeForm,
+        documentsProvided: updatedDocumentsProvided,
         generalInformation: {
           ...general,
           citizenshipCountries: cleanedCitizenships

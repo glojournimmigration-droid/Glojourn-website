@@ -6,12 +6,27 @@ const documentSchema = new mongoose.Schema({
         required: true
     },
     file_path: {
+        type: String
+    },
+    file_url: {
         type: String,
         required: true
     },
     file_type: {
         type: String,
         required: true
+    },
+    file_size: {
+        type: Number
+    },
+    cloudinary_public_id: {
+        type: String,
+        required: true
+    },
+    storage_provider: {
+        type: String,
+        enum: ['cloudinary'],
+        default: 'cloudinary'
     },
     document_type: {
         type: String,

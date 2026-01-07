@@ -1,29 +1,15 @@
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 const { body, param } = require('express-validator');
-const { uploadDocument } = require('../controllers/documentController');
+const { uploadDocument, getDocumentsForApplication } = require('../controllers/documentController');
 const { authenticateToken } = require('../middleware/auth');
 const env = require('../config/env');
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '..', 'uploads');
-    fs.mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
-  }
-});
-
+// Configure multer for in-memory file uploads
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: env.MAX_FILE_SIZE_BYTES
   },
@@ -59,5 +45,9 @@ router.post('/upload', upload.single('file'), [
   body('application_id').isMongoId().withMessage('Invalid application ID'),
   body('document_type').optional().isIn(allowedDocTypes).withMessage('Invalid document type')
 ], uploadDocument);
+
+router.get('/application/:applicationId', [
+  param('applicationId').isMongoId().withMessage('Invalid application ID')
+], getDocumentsForApplication);
 
 module.exports = router;

@@ -1,8 +1,6 @@
-# Dependencies
 node_modules/
-
-# Environment variables
 .env
+# Environment variables
 .env.local
 .env.*.local
 .env.test
@@ -32,7 +30,10 @@ coverage/
 # Uploads
 uploads/
 
-# Credentials
+# Credentials and Keys
 *.pem
 *.key
 *.crt
+
+backend\.env
+D:\glojourn\Glojourn-website\backend\.env

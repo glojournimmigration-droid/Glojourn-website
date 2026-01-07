@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
+const compression = require('compression');
 const env = require('./config/env');
 const connectDB = require('./config/database');
 
@@ -27,6 +29,8 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet());
+app.use(compression()); // Compress responses
+app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev')); // Logging
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
@@ -62,7 +66,14 @@ app.get('/', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Something went wrong!';
+
+  res.status(statusCode).json({
+    message,
+    stack: env.NODE_ENV === 'production' ? null : err.stack
+  });
 });
 
 // Start server
