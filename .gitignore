@@ -34,3 +34,6 @@ uploads/
 *.pem
 *.key
 *.crt
+
+backend\.env
+D:\glojourn\Glojourn-website\backend\.env
