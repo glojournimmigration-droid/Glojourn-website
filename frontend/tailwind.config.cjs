@@ -52,7 +52,13 @@ module.exports = {
           3: "hsl(var(--chart-3))",
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))"
-        }
+        },
+        "primary-navy": "var(--primary-navy)",
+        "accent-gold": "var(--accent-gold)",
+        "accent-gold-dim": "var(--accent-gold-dim)",
+        "highlight-teal": "var(--highlight-teal)",
+        "pure-white": "var(--pure-white)",
+        "off-white": "var(--off-white)"
       },
       keyframes: {
         "accordion-down": {
