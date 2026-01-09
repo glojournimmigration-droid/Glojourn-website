@@ -5,11 +5,12 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
-const connectDB = require('../config/database');
-const User = require('../models/User');
 
 // Load environment variables from the backend root .env if present
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+const connectDB = require('../config/database');
+const User = require('../models/User');
 
 // Fail fast with helpful error when critical env is missing
 const requireEnv = (name) => {
